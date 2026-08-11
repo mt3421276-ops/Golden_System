@@ -1,0 +1,33 @@
+name: golden_system
+description: نظام الأنمي المتكامل - Golden System
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+  google_fonts: ^6.2.1
+  image_picker: ^1.1.2
+  shared_preferences: ^2.5.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/golden_system.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/golden_system.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
