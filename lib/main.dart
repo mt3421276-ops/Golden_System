@@ -1,5 +1,6 @@
-import 'dart:async';
+
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -13,7 +14,7 @@ import 'social_screen.dart';
 import 'screens/shop_screen.dart';
 import 'screens/license_screen.dart';
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const GoldenSystemApp());
 }
@@ -38,53 +39,40 @@ class _GoldenSystemAppState extends State<GoldenSystemApp> {
   }
 
   Future<void> _initializeApp() async {
-    try {
-      final prefs = await SharedPreferences.getInstance().timeout(
-        const Duration(seconds: 5),
-      );
-      final code = prefs.getString('app_language') ?? 'ar';
-      if (mounted) setState(() => _locale = Locale(code));
-    } catch (_) {
-      // Use Arabic if preferences are temporarily unavailable.
-    }
-
-    try {
-      final data = await UserStorage.load().timeout(
-        const Duration(seconds: 5),
-      );
-      if (data != null && data['registered'] == true) {
-        savedData = data;
-        registered = true;
-      }
-    } catch (_) {
-      // A broken/old saved profile must never leave the app on a black screen.
-      registered = false;
-      savedData = null;
-    }
-
-    if (mounted) setState(() => loading = false);
+    final prefs = await SharedPreferences.getInstance();
+    final code = prefs.getString('app_language') ?? 'ar';
+    _locale = Locale(code);
+    await _checkAccount();
   }
 
-  Future<void> _onRegistered() async {
-    try {
-      final data = await UserStorage.load();
-      if (data != null && data['registered'] == true && mounted) {
-        setState(() {
-          savedData = data;
-          registered = true;
-        });
-      }
-    } catch (_) {
-      // Keep the registration screen visible if loading the saved profile fails.
+  Future<void> _checkAccount() async {
+    final data = await UserStorage.load();
+
+    if (data != null && data['registered'] == true) {
+      savedData = data;
+      registered = true;
     }
+
+    if (mounted) {
+      setState(() => loading = false);
+    }
+  }
+
+  Future<void> _handleRegistrationComplete() async {
+    final data = await UserStorage.load();
+    if (!mounted || data == null || data['registered'] != true) return;
+    setState(() {
+      savedData = data;
+      registered = true;
+    });
   }
 
   Future<void> changeLanguage(String code) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('app_language', code);
-    } catch (_) {}
-    if (mounted) setState(() => _locale = Locale(code));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('app_language', code);
+    if (mounted) {
+      setState(() => _locale = Locale(code));
+    }
   }
 
   @override
@@ -93,7 +81,6 @@ class _GoldenSystemAppState extends State<GoldenSystemApp> {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         locale: _locale,
-        theme: ThemeData.dark(),
         home: const SplashScreen(),
       );
     }
@@ -120,7 +107,9 @@ class _GoldenSystemAppState extends State<GoldenSystemApp> {
               currentLocale: _locale,
               onLanguageChanged: changeLanguage,
             )
-          : RegisterScreen(onRegistered: _onRegistered),
+          : RegisterScreen(
+              onRegistered: _handleRegistrationComplete,
+            ),
     );
   }
 }
@@ -143,10 +132,13 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   static const gold = Color(0xFFFFC83D);
+
   int currentIndex = 0;
   late PlayerData player;
+
   File? profileImage;
   File? licenseImage;
+
   int goldBalance = 1500;
   int diamonds = 250;
   int currentLevel = 1;
@@ -168,21 +160,21 @@ class _MainNavigationState extends State<MainNavigation> {
       final file = File(profilePath);
       if (file.existsSync()) profileImage = file;
     }
+
     if (licensePath != null && licensePath.isNotEmpty) {
       final file = File(licensePath);
       if (file.existsSync()) licenseImage = file;
     }
   }
 
+
   Future<void> _loadBalances() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (!mounted) return;
-      setState(() {
-        goldBalance = prefs.getInt('gold_balance') ?? 1500;
-        diamonds = prefs.getInt('diamonds_balance') ?? 250;
-      });
-    } catch (_) {}
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      goldBalance = prefs.getInt('gold_balance') ?? 1500;
+      diamonds = prefs.getInt('diamonds_balance') ?? 250;
+    });
   }
 
   AppLanguage get appLanguage {
@@ -215,7 +207,10 @@ class _MainNavigationState extends State<MainNavigation> {
         characterName: player.characterName,
         profileImage: profileImage,
       ),
-      SocialScreen(playerName: player.playerName, playerId: player.playerId),
+      SocialScreen(
+        playerName: player.playerName,
+        playerId: player.playerId,
+      ),
       ShopScreen(
         goldBalance: goldBalance,
         diamonds: diamonds,
@@ -224,7 +219,9 @@ class _MainNavigationState extends State<MainNavigation> {
       LicenseScreen(
         ownedLevels: ownedLevels,
         activeLevel: currentLevel,
-        onLevelChanged: (level) => setState(() => currentLevel = level),
+        onLevelChanged: (level) {
+          setState(() => currentLevel = level);
+        },
       ),
       ProfileScreen(
         playerName: player.playerName,
@@ -241,13 +238,17 @@ class _MainNavigationState extends State<MainNavigation> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: IndexedStack(index: currentIndex, children: pages),
+      body: IndexedStack(
+        index: currentIndex,
+        children: pages,
+      ),
       bottomNavigationBar: NavigationBar(
         backgroundColor: const Color(0xFF0B0B0B),
         indicatorColor: const Color(0x33FFC83D),
         selectedIndex: currentIndex,
-        onDestinationSelected: (index) =>
-            setState(() => currentIndex = index),
+        onDestinationSelected: (index) {
+          setState(() => currentIndex = index);
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
@@ -296,11 +297,13 @@ class SplashScreen extends StatelessWidget {
               width: 180,
               height: 180,
               fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const Icon(
-                Icons.workspace_premium_rounded,
-                color: Color(0xFFFFC83D),
-                size: 130,
-              ),
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.workspace_premium_rounded,
+                  color: Color(0xFFFFC83D),
+                  size: 130,
+                );
+              },
             ),
             const SizedBox(height: 25),
             const Text(
